@@ -161,6 +161,7 @@ def getOrderId():
     return result[0][0]
 
 def clearCart(customerID: str):
+    print("I'm here")
     query = f"""DELETE FROM product_in_cart WHERE Customer_ID = {customerID};
 """
     result = execUpdates(query)
