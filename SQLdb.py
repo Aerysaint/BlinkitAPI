@@ -128,31 +128,62 @@ def getPriceOfProduct(productID: str):
     return result
 
 
-def putInHistory(customerID: int, orderID: int):
-    query = f"""INSERT INTO `Order_History` (`Customer_ID`, `Order_ID`, `Price`, `Date_of_Purchase`)
-VALUES
-({customerID}, {orderID}, (SELECT `Price` FROM `Product` WHERE `Product_ID` = 1), CURRENT_DATE());"""
+def putInHistory(customerID: int):
+    query = f"""INSERT INTO `Order_History` (`Customer_ID`, `Product_ID`, `Price`, `Date_of_Purchase`)
+SELECT
+    {customerID},
+    `Product_ID`,
+    (SELECT SUM(Price * Quantity) FROM Product_in_Cart WHERE Customer_ID = {customerID}),
+    CURRENT_DATE()
+FROM
+    `Product_in_Cart`
+WHERE
+    `Customer_ID` = {customerID};
+"""
+    result = execUpdates(query)
+    print(result)
+    return result
+
+def getCartPrice(customerID: int):
+    query = f"""SELECT SUM(Price * Quantity) FROM Product_in_Cart WHERE Customer_ID = {customerID};"""
+    result = execSQL(query)
+    print(result)
+    return result[0][0]
+
+def insertOrder(price, orderType):
+    query = f"""INSERT INTO `Order` (`Price`, `Order_Date`, `Payment_Type`)
+VALUES ('{price}', CURRENT_DATE(), '{orderType}');
+"""
+    result = execUpdates(query)
+def getOrderId():
+    query = """SELECT LAST_INSERT_ID();"""
+    result = execSQL(query)
+    return result[0][0]
+
+def clearCart(customerID: str):
+    query = f"""DELETE FROM product_in_cart WHERE Customer_ID = {customerID};
+"""
     result = execUpdates(query)
     print(result)
     return result
 
 
-def checkout(customerID: str):
-    query = f"""INSERT INTO `Order` (`Price`, `Order_Date`, `Payment_Type`)
-VALUES
-    -- Assume the total price and payment type based on the products in the cart
-    ((SELECT SUM(Price * Quantity) FROM Product_in_Cart WHERE Customer_ID = {customerID}), CURRENT_DATE(), 'Prepaid');
-@SET price = (SELECT SUM(Price * Quantity) FROM Product_in_Cart WHERE Customer_ID = {customerID});
--- Step 2: Retrieving the Order_ID of the newly inserted order
-SET @OrderID := LAST_INSERT_ID();
-INSERT INTO `Order_History` (`Customer_ID`, `Order_ID`, `Price`, `Date_of_Purchase`)
-VALUES
-({customerID}, @OrderID, @price , CURRENT_DATE());
-
+async def checkout(customerID: str):
+    print(customerID)
+    print("hello")
+    price = await getCartPrice(customerID)
+    await insertOrder(price, "CoD")
+    print("here1")
+    orderID = await getOrderId()
+    print("here2")
+    await clearCart(customerID)
+    print("doen")
+    # putInHistory(customerID)
+    query = f"""
 -- Step 3: Inserting into Customer_Order table to link customer with the order
 INSERT INTO `Customer_Order` (`Customer_ID`, `Order_ID`)
 VALUES
-    ({customerID}, @OrderID);
+    ({customerID}, {orderID});
 
 -- Step 4: Assigning a delivery agent to the order (Assuming random assignment)
 SET @RandomAgentID := (SELECT Agent_ID FROM Delivery_Agent ORDER BY RAND() LIMIT 1);
@@ -168,12 +199,7 @@ VALUES
     return result
 
 
-def clearCart(customerID: str):
-    query = f"""DELETE FROM product_in_cart WHERE Customer_ID = {customerID};
-"""
-    result = execUpdates(query)
-    print(result)
-    return result
+
 
 # def testing():
 #   query = """INSERT INTO Product(Product_ID, Product_Name, Brand, Price, Quantity, Expiry_Date)

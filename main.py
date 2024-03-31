@@ -82,9 +82,9 @@ async def getMostLeastBought(order: str):
 
 @app.get("/checkout")
 async def checkout(customerID : str):
-    # clearCart = db.clearCart(customerID)
+    clearCart = db.clearCart(customerID)
     print("ye toh ho gaya /////////////////////////////////////////////////////////")
-    res = checkout(customerID)
+    # res = db.checkout(customerID)
     print("ye bhi ")
     hehe = {1: 10, 2: 20, 3: 30, 4: 40, 5: 50}
     return hehe
