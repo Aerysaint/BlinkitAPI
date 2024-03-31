@@ -1,66 +1,77 @@
 import mysql.connector
 
 mydb = mysql.connector.connect(
-  host="localhost",
-  user="shawarma",
-  password="123456789!",
-  database="deadline4"
+    host="localhost",
+    user="shawarma",
+    password="123456789!",
+    database="deadline4"
 )
 
 mycursor = mydb.cursor()
 
 
+def execSQL(query: str):
+    mycursor.execute(query)
+    result = mycursor.fetchall()
 
-def execSQL(query : str):
-  mycursor.execute(query)
-  result = mycursor.fetchall()
-  return result
+    return result
 
+def execUpdates(query: str):
+    mycursor.execute(query)
+    mydb.commit()
+    result = mycursor.fetchall()
+
+    return result
 
 def getAdminPassword(adminID: int):
-  query = f"""SELECT Password
+    query = f"""SELECT Password
   FROM Admin
   WHERE Admin.Login_ID= {adminID}"""
-  result = execSQL(query)
-  # print(type(result))
-  return result
+    result = execSQL(query)
+    # print(type(result))
+    return result
+
 
 def getCustomerPassword(customerID: int):
-  query = f"""SELECT Password
+    query = f"""SELECT Password
    FROM Customer
    WHERE Customer.Customer_ID= {customerID}"""
-  result = execSQL(query)
-  # print(type(result))
-  return result
+    result = execSQL(query)
+    # print(type(result))
+    return result
 
 
 def getAllProducts():
-  query = """SELECT * 
+    query = """SELECT * 
   FROM deadline4.product;"""
-  result = execSQL(query)
-  return result
-def getItemsInOrder(criteria : str):
-  cr = criteria
-  query = f"""SELECT *
+    result = execSQL(query)
+    return result
+
+
+def getItemsInOrder(criteria: str):
+    cr = criteria
+    query = f"""SELECT *
   FROM deadline4.Product
   order by {cr}; """
-  result = execSQL(query)
-  # print(type(result))
-  return result
+    result = execSQL(query)
+    # print(type(result))
+    return result
 
-def ExtremumBought(order : str):
-  query = f""" SELECT P.*, COUNT(OH.Product_ID) AS Num_of_Purchases
+
+def ExtremumBought(order: str):
+    query = f""" SELECT P.*, COUNT(OH.Product_ID) AS Num_of_Purchases
 FROM Product P
 LEFT JOIN Order_History OH ON P.Product_ID = OH.Product_ID
 GROUP BY P.Product_ID
 ORDER BY Num_of_Purchases {order};
   """
-  result = execSQL(query)
-  print(result)
-  return result
+    result = execSQL(query)
+    print(result)
+    return result
 
-def getCustomerCart(customerID : str):
-  query = f"""SELECT
+
+def getCustomerCart(customerID: str):
+    query = f"""SELECT
     Product.Product_ID,
     Product.Product_Name,
     Product.Brand,
@@ -73,54 +84,61 @@ JOIN
 WHERE
     Product_in_Cart.Customer_ID = {customerID};
 """
-  result = execSQL(query)
-  print(result)
-  return result
-def addProductToCart(customerID : int, productID : int, price, quantity : int):
-  query = f"""
+    result = execSQL(query)
+    print(result)
+    return result
+
+
+def addProductToCart(customerID: int, productID: int, price, quantity: int):
+    query = f"""
 INSERT INTO Product_in_Cart (Customer_ID, Product_ID, Price, Quantity)
 VALUES
 ({customerID}, {productID}, {price}, {quantity});
 
 """
-  result = execSQL(query)
-  print(result)
-  return result
+    result = execUpdates(query)
+    print(result)
+    return result
 
-def getTotalPrice(customerID : int):
-  query = f"""SET @total_price := (SELECT SUM(`Price` * `Quantity`) FROM `Product_in_Cart` WHERE `Customer_ID` = {customerID});"""
-  result = execSQL(query)
-  print(result)
-  return result
+
+def getTotalPrice(customerID: int):
+    query = f"""SET @total_price := (SELECT SUM(`Price` * `Quantity`) FROM `Product_in_Cart` WHERE `Customer_ID` = {customerID});"""
+    result = execSQL(query)
+    print(result)
+    return result
+
 
 def prepareOrder():
-  query = f"""INSERT INTO `Order` (`Price`, `Order_Date`, `Payment_Type`)
+    query = f"""INSERT INTO `Order` (`Price`, `Order_Date`, `Payment_Type`)
 VALUES
 (@total_price, CURRENT_DATE(), 'Cod');
 
 SET @order_id := LAST_INSERT_ID();"""
-  result = execSQL(query)
-  print(result)
-  return result
+    result = execUpdates(query)
+    print(result)
+    return result
 
-def getPriceOfProduct(productID : str):
-  query = f"""SELECT Price
+
+def getPriceOfProduct(productID: str):
+    query = f"""SELECT Price
   FROM Product
   WHERE Product_ID = {productID};"""
-  result = execSQL(query)
-  print(result)
-  return result
+    result = execSQL(query)
+    print(result)
+    return result
 
-def putInHistory(customerID : int, orderID : int):
-  query = f"""INSERT INTO `Order_History` (`Customer_ID`, `Order_ID`, `Price`, `Date_of_Purchase`)
+
+def putInHistory(customerID: int, orderID: int):
+    query = f"""INSERT INTO `Order_History` (`Customer_ID`, `Order_ID`, `Price`, `Date_of_Purchase`)
 VALUES
 ({customerID}, {orderID}, (SELECT `Price` FROM `Product` WHERE `Product_ID` = 1), CURRENT_DATE());"""
-  result = execSQL(query)
-  print(result)
-  return result
+    result = execUpdates(query)
+    print(result)
+    return result
 
-def checkout(customerID : str):
-  query = f"""INSERT INTO `Order` (`Price`, `Order_Date`, `Payment_Type`)
+
+def checkout(customerID: str):
+    query = f"""INSERT INTO `Order` (`Price`, `Order_Date`, `Payment_Type`)
 VALUES
     -- Assume the total price and payment type based on the products in the cart
     ((SELECT SUM(Price * Quantity) FROM Product_in_Cart WHERE Customer_ID = {customerID}), CURRENT_DATE(), 'Prepaid');
@@ -142,18 +160,20 @@ SET @RandomAgentID := (SELECT Agent_ID FROM Delivery_Agent ORDER BY RAND() LIMIT
 -- Step 5: Inserting into Order_Delivery table to link order with delivery agent
 INSERT INTO `Order_Delivery` (`Agent_ID`, `Order_ID`)
 VALUES
-    (@RandomAgentID, @OrderID);"""
-  result = execSQL(query)
-  print(result)
-  clearCart(customerID)
-  return result
+    (@RandomAgentID, @OrderID);
+  DELETE FROM product_in_cart WHERE Customer_ID = {customerID};"""
+    result = execUpdates(query)
+    print(result)
+    # clearCart(customerID)
+    return result
 
-def clearCart(customerID : str):
-  query = f"""DELETE FROM product_in_cart WHERE Customer_ID = {customerID};
+
+def clearCart(customerID: str):
+    query = f"""DELETE FROM product_in_cart WHERE Customer_ID = {customerID};
 """
-  result = execSQL(query)
-  print(result)
-  return result
+    result = execUpdates(query)
+    print(result)
+    return result
 
 # def testing():
 #   query = """INSERT INTO Product(Product_ID, Product_Name, Brand, Price, Quantity, Expiry_Date)
