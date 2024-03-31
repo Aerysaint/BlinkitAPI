@@ -13,7 +13,6 @@ mycursor = mydb.cursor()
 def execSQL(query: str):
     mycursor.execute(query)
     result = mycursor.fetchall()
-
     return result
 
 def execUpdates(query: str):
@@ -158,6 +157,7 @@ VALUES ('{price}', CURRENT_DATE(), '{orderType}');
 def getOrderId():
     query = """SELECT LAST_INSERT_ID();"""
     result = execSQL(query)
+    print(result)
     return result[0][0]
 
 def clearCart(customerID: str):
@@ -168,34 +168,55 @@ def clearCart(customerID: str):
     print(result)
     return result
 
+def restInCheckout(customerID, orderID):
+    query1 = f"""
+        INSERT INTO `Customer_Order` (`Customer_ID`, `Order_ID`)
+        VALUES
+            ({customerID}, {orderID});
+        """
+    result1 = execUpdates(query1)
+    print(result1)
 
-async def checkout(customerID: str):
-    print(customerID)
-    print("hello")
-    price = await getCartPrice(customerID)
-    await insertOrder(price, "CoD")
-    print("here1")
-    orderID = await getOrderId()
-    print("here2")
-    await clearCart(customerID)
-    print("doen")
-    # putInHistory(customerID)
-    query = f"""
--- Step 3: Inserting into Customer_Order table to link customer with the order
-INSERT INTO `Customer_Order` (`Customer_ID`, `Order_ID`)
-VALUES
-    ({customerID}, {orderID});
+    # Step 4: Assigning a delivery agent to the order (Assuming random assignment)
+    query2 = """
+        SET @RandomAgentID := (SELECT Agent_ID FROM Delivery_Agent ORDER BY RAND() LIMIT 1);
+        """
+    result2 = execUpdates(query2)
+    print(result2)
 
--- Step 4: Assigning a delivery agent to the order (Assuming random assignment)
-SET @RandomAgentID := (SELECT Agent_ID FROM Delivery_Agent ORDER BY RAND() LIMIT 1);
+    # Step 5: Inserting into Order_Delivery table to link order with delivery agent
+    query3 = f"""
+        INSERT INTO `Order_Delivery` (`Agent_ID`, `Order_ID`)
+        VALUES
+            (@RandomAgentID, {orderID});
+        """
+    result3 = execUpdates(query3)
+    print(result3)
 
--- Step 5: Inserting into Order_Delivery table to link order with delivery agent
-INSERT INTO `Order_Delivery` (`Agent_ID`, `Order_ID`)
-VALUES
-    (@RandomAgentID, @OrderID);
-  DELETE FROM product_in_cart WHERE Customer_ID = {customerID};"""
+    # Step 6: Clearing the cart for the customer
+    query4 = f"""
+        DELETE FROM product_in_cart WHERE Customer_ID = {customerID};
+        """
+    result4 = execUpdates(query4)
+    print(result4)
+
+    return result1, result2, result3, result4
     result = execUpdates(query)
     print(result)
+
+def checkout(customerID: str):
+    print(customerID)
+    print("hello")
+    price = getCartPrice(customerID)
+    insertOrder(price, "CoD")
+    print("here1")
+    orderID = getOrderId()
+    print("here2")
+    abc = clearCart(customerID)
+    print("doen")
+    result = restInCheckout(customerID, orderID)
+    # putInHistory(customerID)
+
     # clearCart(customerID)
     return result
 
