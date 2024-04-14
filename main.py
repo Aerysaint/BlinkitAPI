@@ -6,7 +6,7 @@ import simplejson as json
 app = FastAPI()
 
 origins = [
-    "http://localhost:63342" #TODO: change this number as per the port number used then.
+    "http://localhost:63343" #TODO: change this number as per the port number used then.
 ]
 
 app.add_middleware(
